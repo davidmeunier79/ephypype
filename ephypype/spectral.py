@@ -5,7 +5,7 @@ import numpy as np
 
 ################################################### compute spectral connectivity #############################################################################"
 
-def compute_spectral_connectivity(data,con_method,sfreq,fmin,fmax,mode = 'cwt_morlet'):
+def compute_spectral_connectivity(data,con_method,sfreq,fmin,fmax,mode = 'cwt_morlet', gathering_method = 'mean'):
 
     import numpy as np
     from mne.connectivity import spectral_connectivity
@@ -21,41 +21,122 @@ def compute_spectral_connectivity(data,con_method,sfreq,fmin,fmax,mode = 'cwt_mo
         
     if mode == 'multitaper':
         
-        con_matrix, freqs, times, n_epochs, n_tapers  = spectral_connectivity(data, method=con_method, sfreq=sfreq, fmin= fmin, fmax=fmax, faverage=True, tmin=None, mode = 'multitaper',   mt_adaptive=False, n_jobs=1)
-        print con_matrix.shape
         
-        con_matrix = np.array(con_matrix[:,:,0])
+        #con_matrix, freqs, times, n_epochs, n_tapers  = spectral_connectivity(data, method=con_method, sfreq=sfreq, fmin= fmin, fmax=fmax, faverage=True, tmin=None, mode = 'multitaper',   mt_adaptive=False, n_jobs=1)
+        #print con_matrix.shape
         
+        #con_matrix = np.array(con_matrix[:,:,0])
+        if gathering_method == "mean":
+            con_matrix, _, _, _, _ = spectral_connectivity(
+            data, method=con_method, sfreq=sfreq, fmin=fmin,
+            fmax=fmax, faverage=True, tmin=None, mode='multitaper',
+            mt_adaptive=False, n_jobs=1)
+        
+            con_matrix = np.array(con_matrix[:, :, 0])
+            print (con_matrix)
+        elif gathering_method == "max":
+            con_matrix, _, _, _, _ = spectral_connectivity(
+            data, method=con_method, sfreq=sfreq, fmin=fmin,
+            fmax=fmax, faverage=False, tmin=None, mode='multitaper',
+            mt_adaptive=False, n_jobs=1)
+            
+            con_matrix = np.amax(con_matrix, axis = 2)
+            
+            print (con_matrix)
+        elif gathering_method == "none":
+            
+            con_matrix, _, _, _, _ = spectral_connectivity(
+            data, method=con_method, sfreq=sfreq, fmin=fmin,
+            fmax=fmax, faverage=False, tmin=None, mode='multitaper',
+            mt_adaptive=False, n_jobs=1)
+        
+        else:
+            print('Unknown gathering method')
+            return None
+        print((con_matrix.shape))
+
+
     elif mode == 'cwt_morlet':
         
         frequencies = np.arange(fmin, fmax, 1)
         n_cycles = frequencies / 7.
         
-        print data
+        #print data
         
-        con_matrix, freqs, times, n_epochs, n_tapers  = spectral_connectivity(data, method=con_method, sfreq=sfreq, faverage=True, tmin=None, mode='cwt_morlet',   cwt_frequencies= frequencies, cwt_n_cycles= n_cycles, n_jobs=1)
+        #con_matrix, freqs, times, n_epochs, n_tapers  = spectral_connectivity(data, method=con_method, sfreq=sfreq, faverage=True, tmin=None, mode='cwt_morlet',   cwt_frequencies= frequencies, cwt_n_cycles= n_cycles, n_jobs=1)
         
-        con_matrix = np.mean(np.array(con_matrix[:,:,0,:]),axis = 2)
+        #con_matrix = np.mean(np.array(con_matrix[:,:,0,:]),axis = 2)
         
-    print con_matrix.shape
-    print np.min(con_matrix),np.max(con_matrix)
-        
+        print(data)
+        if gathering_method == "mean":
+            con_matrix, _, _, _, _ = spectral_connectivity(
+                data, method=con_method, sfreq=sfreq, faverage=True,
+                tmin=None, mode='cwt_morlet', cwt_freqs=frequencies,
+                cwt_n_cycles=n_cycles, n_jobs=1)
+            
+            #con_matrix, _, _, _, _ = spectral_connectivity(
+                #data, method=con_method, sfreq=sfreq, faverage=True,
+                #tmin=None, mode='cwt_morlet', cwt_frequencies=frequencies,
+                #cwt_n_cycles=n_cycles, n_jobs=1)
+            
+            con_matrix = np.mean(np.array(con_matrix[:, :, 0, :]), axis=2)
+            
+            print (con_matrix)
+        elif gathering_method == "max":
+            con_matrix, _, _, _, _ = spectral_connectivity(
+                data, method=con_method, sfreq=sfreq, faverage=False,
+                tmin=None, mode='cwt_morlet', cwt_freqs=frequencies,
+                cwt_n_cycles=n_cycles, n_jobs=1)
+            
+            
+            #print (con_matrix)
+            print (np.mean(np.array(con_matrix), axis=3))
+            0/0
+            
+            con_matrix = np.amax(np.mean(np.array(con_matrix), axis=3),axis = 2)
+            
+            
+        elif gathering_method == "none":
+            con_matrix, _, _, _, _ = spectral_connectivity(
+                data, method=con_method, sfreq=sfreq, faverage=False,
+                tmin=None, mode='cwt_morlet', cwt_freqs=frequencies,
+                cwt_n_cycles=n_cycles, n_jobs=1)
+            
+            
+            con_matrix = np.mean(np.array(con_matrix), axis=3)
+            
+            print (con_matrix)
+            
+            print(con_matrix.shape)
+            
+        else:
+            print('Unknown gathering method')
+            return None
+    else:
+        print('Time-frequency transformation mode is not set')
+        return None
+
     return con_matrix
 
-############################################################# compute and save #############################################################
-def compute_and_save_spectral_connectivity(data,con_method,sfreq,fmin,fmax,index = 0,mode = 'cwt_morlet',export_to_matlab = False):
+############################################################## compute and save #############################################################
+#def compute_and_save_spectral_connectivity(data,con_method,sfreq,fmin,fmax,index = 0,mode = 'cwt_morlet',export_to_matlab = False):
 
-    import sys,os
+    #import sys,os
+# ----------------------- compute and save  ----------------------- #
+def compute_and_save_spectral_connectivity(data, con_method, sfreq, fmin, fmax,
+                                           index=0, mode='cwt_morlet',
+                                           export_to_matlab=False, gathering_method = "mean"):
 
+    import os
     import numpy as np
     from scipy.io import savemat
     
-    print data.shape
+    #print data.shape
 
-    from ephypype.spectral import compute_spectral_connectivity
+    #from ephypype.spectral import compute_spectral_connectivity
 
 
-    con_matrix = compute_spectral_connectivity(data,con_method,sfreq,fmin,fmax,mode)
+    con_matrix = compute_spectral_connectivity(data,con_method,sfreq,fmin,fmax,mode, gathering_method)
         
 
     conmat_file = os.path.abspath("conmat_" + str(index) + "_" + con_method + ".npy")
@@ -64,15 +145,22 @@ def compute_and_save_spectral_connectivity(data,con_method,sfreq,fmin,fmax,index
 
     if export_to_matlab:
         
-        conmat_matfile = os.path.abspath("conmat_" + str(index) + "_" + con_method + ".mat")
+        conmat_matfile = os.path.abspath(
+            "conmat_" + str(index) + "_" + con_method + ".mat")
         
-        savemat(conmat_matfile,{"conmat":con_matrix + np.transpose(con_matrix)})
+        savemat(conmat_matfile,{
+            "conmat":con_matrix + np.transpose(con_matrix)})
           
     return conmat_file
 
-def compute_and_save_multi_spectral_connectivity(all_data,con_method,sfreq,fmin,fmax,mode = 'cwt_morlet',export_to_matlab = False):
+#def compute_and_save_multi_spectral_connectivity(all_data,con_method,sfreq,fmin,fmax,mode = 'cwt_morlet',export_to_matlab = False):
     
-    import numpy
+    #import numpy
+
+def compute_and_save_multi_spectral_connectivity(all_data, con_method, sfreq,
+                                                 fmin, fmax, mode='cwt_morlet',
+                                                 export_to_matlab=False, gathering_method = "mean"):
+
     from ephypype.spectral import compute_and_save_spectral_connectivity
     
     print all_data.shape
@@ -95,21 +183,10 @@ def compute_and_save_multi_spectral_connectivity(all_data,con_method,sfreq,fmin,
 
         print data.shape
         
-        conmat_file = compute_and_save_spectral_connectivity(data,con_method,sfreq,fmin,fmax,index = i,mode = mode,export_to_matlab = export_to_matlab)
+        conmat_file = compute_and_save_spectral_connectivity(
+            data,con_method,sfreq,fmin,fmax,index = i,
+            mode = mode,export_to_matlab = export_to_matlab, gathering_method = gathering_method)
             
-        #print data.shape
-        
-        #con_matrix, freqs, times, n_epochs, n_tapers  = spectral_connectivity(data, method=con_method, mode='multitaper', sfreq=sfreq, fmin= freq_band[0], fmax=freq_band[1], faverage=True, tmin=None,    mt_adaptive=False, n_jobs=1)
-
-        #con_matrix = np.array(con_matrix[:,:,0])
-
-        #print con_matrix.shape
-        #print np.min(con_matrix),np.max(con_matrix)
-        
-        #conmat_file = os.path.abspath("conmat_"+ con_method + "_" + str(i) + ".npy")
-
-        #np.save(conmat_file,con_matrix)
-
         conmat_files.append(conmat_file)
             
     return conmat_files

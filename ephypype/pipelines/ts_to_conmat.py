@@ -18,7 +18,6 @@ from ephypype.nodes.ts_tools import SplitWindows
 #from ephypype.spectral import  filter_adj_plot_mat
 
 def create_pipeline_time_series_to_spectral_connectivity(main_path, 
-                                                         sfreq,
                                                          pipeline_name='ts_to_conmat',
                                                          con_method='coh',
                                                          multi_con=False,
@@ -26,7 +25,8 @@ def create_pipeline_time_series_to_spectral_connectivity(main_path,
                                                          n_windows=[],
                                                          mode='multitaper',
                                                          is_sensor_space=True,
-                                                         epoch_window_length=-1.0):
+                                                         epoch_window_length=-1.0,
+                                                         gathering_method = "mean"):
     
     """
     Description:
@@ -53,7 +53,11 @@ def create_pipeline_time_series_to_spectral_connectivity(main_path,
              epoched data
         is_sensor_space : bool (default True)
              True if we compute connectivity on sensor space
-
+        gathering_method : str
+             how the connectivity matrices are gathered
+             possible choices: "mean", "max" or "none": 
+             (now a paramter of SpectralConn node)
+          
     Inputs (inputnode):
     
         ts_file : str
@@ -80,7 +84,7 @@ def create_pipeline_time_series_to_spectral_connectivity(main_path,
     pipeline.base_dir = main_path
         
 #    inputnode = pe.Node(IdentityInterface(fields=['ts_file','freq_band','sfreq','labels_file','epoch_window_length','is_sensor_space','index']), name='inputnode')
-    inputnode = pe.Node(IdentityInterface(fields=['ts_file', 'freq_band',
+    inputnode = pe.Node(IdentityInterface(fields=['ts_file', 'freq_band', 'sfreq',
                                                   'labels_file']), name='inputnode')
     if len(n_windows) == 0:
             
@@ -91,15 +95,17 @@ def create_pipeline_time_series_to_spectral_connectivity(main_path,
         
         spectral.inputs.con_method = con_method  
         spectral.inputs.export_to_matlab = export_to_matlab
-        spectral.inputs.sfreq = sfreq
+        #spectral.inputs.sfreq = sfreq
         spectral.inputs.multi_con = multi_con
         spectral.inputs.mode = mode
+        spectral.inputs.gathering_method = gathering_method
+        
         if epoch_window_length:
             spectral.inputs.epoch_window_length = epoch_window_length
         
         pipeline.connect(inputnode, 'ts_file', spectral, 'ts_file')
         pipeline.connect(inputnode, 'freq_band', spectral, 'freq_band')
-#        pipeline.connect(inputnode, 'epoch_window_length', spectral, 'epoch_window_length')
+        pipeline.connect(inputnode, 'sfreq', spectral, 'sfreq')
 
         #### plot spectral
         if multi_con:
@@ -138,12 +144,13 @@ def create_pipeline_time_series_to_spectral_connectivity(main_path,
         
         spectral.inputs.con_method = con_method  
         spectral.inputs.export_to_matlab = export_to_matlab            
-        spectral.inputs.sfreq = sfreq
+        #spectral.inputs.sfreq = sfreq
         spectral.inputs.multi_con = multi_con
         spectral.inputs.mode = mode
+        spectral.inputs.gathering_method = gathering_method
         spectral.inputs.epoch_window_length = epoch_window_length
         
-        #pipeline.connect(inputnode, 'sfreq', spectral, 'sfreq')
+        pipeline.connect(inputnode, 'sfreq', spectral, 'sfreq')
         pipeline.connect(win_ts, 'win_ts_files', spectral, 'ts_file')
         pipeline.connect(inputnode, 'freq_band', spectral, 'freq_band')
         
